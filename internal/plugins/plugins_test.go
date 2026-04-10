@@ -153,3 +153,49 @@ func TestTruncateStr(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidPluginName(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"my-plugin", true},
+		{"plugin_v2", true},
+		{"cool.plugin", true},
+		{"..", false},
+		{".", false},
+		{"", false},
+		{"../../etc", false},
+		{"a/../b", false},
+		{"a/b", false},
+		{"a\\b", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := isValidPluginName(tc.name)
+			if got != tc.want {
+				t.Errorf("isValidPluginName(%q) = %v, want %v", tc.name, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSanitizeEnvKey(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"normal_key", "normal_key"},
+		{"key=value", "keyvalue"},
+		{"key\nnewline", "keynewline"},
+		{"UPPER_123", "UPPER_123"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := sanitizeEnvKey(tc.input)
+			if got != tc.want {
+				t.Errorf("sanitizeEnvKey(%q) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}

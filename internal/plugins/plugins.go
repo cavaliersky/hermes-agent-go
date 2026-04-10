@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/hermes-agent/hermes-agent-go/internal/config"
@@ -206,7 +207,11 @@ func registerPluginTool(plugin Plugin, pt PluginTool) error {
 func executePluginCommand(command, pluginDir string, args map[string]any) string {
 	env := os.Environ()
 	for k, v := range args {
-		env = append(env, fmt.Sprintf("HERMES_ARG_%s=%v", k, v))
+		// Sanitize key: only allow alphanumeric and underscore.
+		safeKey := sanitizeEnvKey(k)
+		if safeKey != "" {
+			env = append(env, fmt.Sprintf("HERMES_ARG_%s=%v", safeKey, v))
+		}
 	}
 	env = append(env, "HERMES_PLUGIN_DIR="+pluginDir)
 
@@ -240,4 +245,15 @@ func truncateStr(s string, max int) string {
 		return s
 	}
 	return s[:max] + "..."
+}
+
+// sanitizeEnvKey strips non-alphanumeric/underscore characters from env var keys.
+func sanitizeEnvKey(key string) string {
+	var b strings.Builder
+	for _, c := range key {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' {
+			b.WriteRune(c)
+		}
+	}
+	return b.String()
 }

@@ -92,6 +92,10 @@ func InstallFromGit(repoURL string) (string, error) {
 
 // UninstallPlugin removes a plugin directory.
 func UninstallPlugin(name string) error {
+	if !isValidPluginName(name) {
+		return fmt.Errorf("invalid plugin name: %q", name)
+	}
+
 	pluginsDir := filepath.Join(config.HermesHome(), "plugins")
 	pluginDir := filepath.Join(pluginsDir, name)
 
@@ -138,7 +142,28 @@ func extractRepoName(url string) string {
 	if len(parts) == 0 {
 		return ""
 	}
-	return parts[len(parts)-1]
+	name := parts[len(parts)-1]
+	// Sanitize to prevent path traversal.
+	if !isValidPluginName(name) {
+		return ""
+	}
+	return name
+}
+
+// isValidPluginName rejects names that could cause path traversal.
+func isValidPluginName(name string) bool {
+	if name == "" || name == "." || name == ".." {
+		return false
+	}
+	for _, c := range name {
+		if c == '/' || c == '\\' || c == '\x00' {
+			return false
+		}
+	}
+	if strings.Contains(name, "..") {
+		return false
+	}
+	return true
 }
 
 // LoadEnabledPlugins discovers and loads only enabled plugins.
