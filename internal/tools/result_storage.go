@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -91,7 +92,7 @@ func (rs *ResultStore) Retrieve(id string) (string, error) {
 		return "", fmt.Errorf("invalid result id: %w", err)
 	}
 	absCacheDir, _ := filepath.Abs(rs.cacheDir)
-	if !filepath.HasPrefix(absPath, absCacheDir) {
+	if !strings.HasPrefix(absPath, absCacheDir+string(filepath.Separator)) {
 		return "", fmt.Errorf("result id contains path traversal")
 	}
 
