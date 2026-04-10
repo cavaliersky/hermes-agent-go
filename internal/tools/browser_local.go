@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"runtime"
@@ -23,6 +24,7 @@ type LocalBrowserBackend struct {
 	sessionID  string
 	currenturl string
 	pagetitle  string
+	chromeProc *os.Process // launched Chrome process, nil if connected to existing
 }
 
 // Compile-time interface check.
@@ -132,7 +134,11 @@ func (b *LocalBrowserBackend) launchChrome() error {
 		"--headless=new",
 		"about:blank",
 	)
-	return cmd.Start()
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	b.chromeProc = cmd.Process
+	return nil
 }
 
 func findChromeBinary() string {
@@ -205,7 +211,7 @@ func (b *LocalBrowserBackend) cdpViaEvaluate(method string, params map[string]an
 		urlStr, _ := params["url"].(string)
 		activateURL := fmt.Sprintf("%s/json/activate/%s", b.cdpURL, b.targetID)
 		b.client.Get(activateURL) //nolint:errcheck
-		navigateURL := fmt.Sprintf("%s/json/navigate?url=%s&id=%s", b.cdpURL, urlStr, b.targetID)
+		navigateURL := fmt.Sprintf("%s/json/navigate?url=%s&id=%s", b.cdpURL, url.QueryEscape(urlStr), url.QueryEscape(b.targetID))
 		resp, err := b.client.Get(navigateURL)
 		if err != nil {
 			return nil, fmt.Errorf("navigate: %w", err)
@@ -353,8 +359,14 @@ func (b *LocalBrowserBackend) Close() {
 	defer b.mu.Unlock()
 
 	if b.targetID != "" {
-		url := fmt.Sprintf("%s/json/close/%s", b.cdpURL, b.targetID)
-		b.client.Get(url) //nolint:errcheck
+		closeURL := fmt.Sprintf("%s/json/close/%s", b.cdpURL, b.targetID)
+		b.client.Get(closeURL) //nolint:errcheck
 		b.targetID = ""
+	}
+
+	// Kill Chrome process if we launched it.
+	if b.chromeProc != nil {
+		b.chromeProc.Kill() //nolint:errcheck
+		b.chromeProc = nil
 	}
 }

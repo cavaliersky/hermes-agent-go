@@ -2,6 +2,8 @@ package tools
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"sync"
 )
@@ -82,4 +84,59 @@ func closeActiveBackend() {
 		activeBackend.Close()
 		activeBackend = nil
 	}
+}
+
+// checkNavigationSafety validates a URL is safe for browser navigation.
+// Returns a reason string if blocked, empty string if safe.
+func checkNavigationSafety(rawURL string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return "invalid url"
+	}
+
+	// Scheme whitelist.
+	switch parsed.Scheme {
+	case "http", "https":
+		// allowed
+	case "":
+		return "missing url scheme"
+	default:
+		return fmt.Sprintf("blocked scheme: %s", parsed.Scheme)
+	}
+
+	hostname := parsed.Hostname()
+
+	// Block cloud metadata endpoints.
+	metadataHosts := []string{
+		"169.254.169.254",
+		"metadata.google.internal",
+		"metadata.goog",
+	}
+	for _, mh := range metadataHosts {
+		if hostname == mh {
+			return "cloud metadata endpoint blocked"
+		}
+	}
+
+	// Block localhost/loopback — except when targeting our own CDP.
+	ips, err := net.LookupHost(hostname)
+	if err != nil {
+		// DNS failure — block to be safe (fail closed).
+		return "dns resolution failed"
+	}
+
+	for _, ipStr := range ips {
+		ip := net.ParseIP(ipStr)
+		if ip == nil {
+			continue
+		}
+		if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+			return "loopback/link-local address blocked"
+		}
+		if ip.IsPrivate() {
+			return "private network address blocked"
+		}
+	}
+
+	return ""
 }

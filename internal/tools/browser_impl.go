@@ -502,9 +502,19 @@ func browserError(tool string, err error) string {
 }
 
 func handleBrowserNavigateImpl(args map[string]any, ctx *ToolContext) string {
-	url, _ := args["url"].(string)
-	if url == "" {
+	navURL, _ := args["url"].(string)
+	if navURL == "" {
 		return `{"error":"url is required"}`
+	}
+
+	// SSRF protection: block navigation to internal/metadata endpoints.
+	if reason := checkNavigationSafety(navURL); reason != "" {
+		return toJSON(map[string]any{
+			"error":   "blocked_url",
+			"url":     navURL,
+			"reason":  reason,
+			"message": "this url was blocked for security reasons",
+		})
 	}
 
 	backend, err := getOrCreateBackend()
@@ -512,7 +522,7 @@ func handleBrowserNavigateImpl(args map[string]any, ctx *ToolContext) string {
 		return browserError("browser_navigate", err)
 	}
 
-	result, err := backend.Navigate(url)
+	result, err := backend.Navigate(navURL)
 	if err != nil {
 		return browserError("browser_navigate", err)
 	}

@@ -131,3 +131,33 @@ func TestFindChromeBinary(t *testing.T) {
 	// This test is environment-dependent; just verify it doesn't panic.
 	_ = findChromeBinary()
 }
+
+func TestCheckNavigationSafety(t *testing.T) {
+	tests := []struct {
+		name    string
+		url     string
+		blocked bool
+	}{
+		{"normal https", "https://example.com", false},
+		{"normal http", "http://example.com/page", false},
+		{"cloud metadata ipv4", "http://169.254.169.254/latest/meta-data/", true},
+		{"cloud metadata google", "http://metadata.google.internal/computeMetadata/v1/", true},
+		{"cloud metadata goog", "http://metadata.goog/computeMetadata/v1/", true},
+		{"file scheme", "file:///etc/passwd", true},
+		{"javascript scheme", "javascript:alert(1)", true},
+		{"no scheme", "example.com", true},
+		{"invalid url", "://bad", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reason := checkNavigationSafety(tt.url)
+			if tt.blocked && reason == "" {
+				t.Errorf("checkNavigationSafety(%q) should be blocked but was allowed", tt.url)
+			}
+			if !tt.blocked && reason != "" {
+				t.Errorf("checkNavigationSafety(%q) blocked with reason %q, should be allowed", tt.url, reason)
+			}
+		})
+	}
+}
