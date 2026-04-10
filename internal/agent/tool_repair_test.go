@@ -8,10 +8,10 @@ import (
 
 func TestRepairToolCall(t *testing.T) {
 	validNames := map[string]bool{
-		"terminal":     true,
-		"read_file":    true,
-		"write_file":   true,
-		"web_search":   true,
+		"terminal":       true,
+		"read_file":      true,
+		"write_file":     true,
+		"web_search":     true,
 		"vision_analyze": true,
 	}
 

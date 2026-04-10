@@ -18,26 +18,26 @@ var (
 	// neverParallelToolsMap contains tools that must never run in parallel
 	// (interactive or state-modifying tools where order matters).
 	neverParallelToolsMap = map[string]bool{
-		"clarify":        true,
-		"delegate_task":  true,
-		"memory":         true,
-		"cronjob":        true,
-		"send_message":   true,
+		"clarify":       true,
+		"delegate_task": true,
+		"memory":        true,
+		"cronjob":       true,
+		"send_message":  true,
 	}
 
 	// parallelSafeToolsMap contains read-only tools that are always safe to parallelize.
 	parallelSafeToolsMap = map[string]bool{
-		"read_file":       true,
-		"search_files":    true,
-		"web_search":      true,
-		"web_extract":     true,
-		"vision_analyze":  true,
-		"skills_list":     true,
-		"skill_view":      true,
-		"session_search":  true,
-		"todo":            true,
-		"process":         true,
-		"ha_get_state":    true,
+		"read_file":        true,
+		"search_files":     true,
+		"web_search":       true,
+		"web_extract":      true,
+		"vision_analyze":   true,
+		"skills_list":      true,
+		"skill_view":       true,
+		"session_search":   true,
+		"todo":             true,
+		"process":          true,
+		"ha_get_state":     true,
 		"ha_list_entities": true,
 		"ha_list_services": true,
 	}

@@ -6,9 +6,9 @@ import (
 
 func TestStripThinkBlocks(t *testing.T) {
 	tests := []struct {
-		name    string
-		input   string
-		want    string
+		name  string
+		input string
+		want  string
 	}{
 		{
 			name:  "no think blocks",
