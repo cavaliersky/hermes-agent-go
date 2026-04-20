@@ -1,4 +1,4 @@
-name: Build Hermes Agent (Android ARMv7 Termux)
+name: Build Hermes Agent (Auto Detect)
 
 on:
   workflow_dispatch:
@@ -10,24 +10,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 拉代码
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ Go 环境
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      # 3️⃣ 下载依赖（防止构建失败）
-      - name: Download dependencies
+      - name: Download deps
         run: |
           go mod tidy
           go mod download
 
-      # 4️⃣ 编译（关键：指定 main 目录）
-      - name: Build ARMv7 (Termux Android 32bit)
+      - name: Build (Auto Detect Main)
         env:
           GOOS: linux
           GOARCH: arm
@@ -35,43 +31,24 @@ jobs:
           CGO_ENABLED: 0
         run: |
           mkdir -p build
+
+          MAIN=$(grep -rl "package main" | grep ".go" | head -n 1)
+          echo "Main file: $MAIN"
+
+          DIR=$(dirname $MAIN)
+          echo "Build dir: $DIR"
+
           go build -ldflags="-s -w" -trimpath \
             -o build/hermes-agent-armv7 \
-            ./cmd/hermes-agent
+            $DIR
 
-      # 5️⃣ 验证文件
       - name: Check binary
         run: |
           file build/hermes-agent-armv7
           ls -lh build/
 
-      # =========================
-      # 📦 方式1：Artifacts（推荐）
-      # =========================
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: hermes-agent-armv7
           path: build/hermes-agent-armv7
-
-      # =========================
-      # 🚀 方式2：Release（自动发布）
-      # =========================
-      - name: Upload Release
-        uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
-        with:
-          tag_name: auto-build
-          name: Auto Build
-          files: build/hermes-agent-armv7
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # =========================
-      # 🧨 方式3：Base64（极端备用）
-      # =========================
-      - name: Print Base64 (fallback)
-        run: |
-          echo "==== BASE64 START ===="
-          base64 build/hermes-agent-armv7 | head -n 200
-          echo "==== BASE64 END ===="
