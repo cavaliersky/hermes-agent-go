@@ -1,54 +1,33 @@
-name: Build Hermes Agent (Auto Detect)
+name: Build Hermes (Final Minimal)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      - name: Download deps
-        run: |
-          go mod tidy
-          go mod download
+      - run: go mod tidy
 
-      - name: Build (Auto Detect Main)
+      - name: Build
         env:
           GOOS: linux
           GOARCH: arm
           GOARM: 7
           CGO_ENABLED: 0
         run: |
-          mkdir -p build
-
-          MAIN=$(grep -rl "package main" | grep ".go" | head -n 1)
-          echo "Main file: $MAIN"
-
-          DIR=$(dirname $MAIN)
-          echo "Build dir: $DIR"
-
           go build -ldflags="-s -w" -trimpath \
-            -o build/hermes-agent-armv7 \
-            $DIR
+            -o hermes \
+            ./cmd/hermes
 
-      - name: Check binary
-        run: |
-          file build/hermes-agent-armv7
-          ls -lh build/
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: hermes-agent-armv7
-          path: build/hermes-agent-armv7
+          name: hermes-armv7
+          path: hermes
